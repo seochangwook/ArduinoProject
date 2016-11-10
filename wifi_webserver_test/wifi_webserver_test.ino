@@ -10,11 +10,14 @@ char trans_str;
 String rcvbuf;
 boolean getIsConnected = false;
 
+//trans data//
+String transdata = "";
+
 unsigned long lastConnectionTime = 0;         // last time you connected to the server, in milliseconds
 const unsigned long postingInterval = 5000L; // delay between updates, in milliseconds
 
 //서버의 정보//
-IPAddress hostIp(192, 168, 0, 9);
+IPAddress hostIp(192, 168, 0, 10);
 
 // Initialize the Ethernet client object
 WiFiClient client;// Initialize the Ethernet client object
@@ -52,27 +55,31 @@ void setup() {
   Serial.println("-------<data trans>-------");
 }
 
-void loop() {
+void loop() 
+{
   // put your main code here, to run repeatedly:
-  if(Serial.available())
+  /*if(Serial.available())
   {
-    trans_str = Serial.read();
-
-    Serial.print(trans_str);
-
-    if(trans_str == 't')
+    char data = Serial.read();
+    
+    if(data == '\n') //Enter key - Line Feed//
     {
-      Serial.println(" -> trans data web server");
+      Serial.print("Trans data [");
+      Serial.print(transdata);
+      Serial.println("] Please wait...");
 
-      //웹 서버로 전송(GET방식)//
-      httpRequest();
+      httpRequest_GET(); //GET method//
+      httpRequest_POST(); //POST method//
+
+      transdata = ""; //init string//
     }
 
-    else 
+    else
     {
-      Serial.println();
+      //string concatination//
+      transdata.concat(data);
     }
-  }
+  }*/
 
   //서버로 부터 값을 받는다.//
   while (client.available()) {
@@ -89,7 +96,7 @@ void loop() {
 }
 //////////////////
 // this method makes a HTTP connection to the server
-void httpRequest() {
+void httpRequest_GET() {
   Serial.println();
 
   // close any connection before send a new request
@@ -103,17 +110,73 @@ void httpRequest() {
     Serial.println("Connecting...");
 
     // send the HTTP GET request
-    client.print(F("GET /DummyServer_Blog/TestArduino/testserver.jsp?test_str="));
-    client.print(trans_str);
+    client.print(F("GET /DummyServer_Blog/TestArduino/testserver.jsp"));
+    client.print("?");
+    //데이터 유무에 따라 값을 넣어주거나 넣지 않는다.//
+    client.print("test_str=");
+    client.print(transdata);
+    
     client.print(F(" HTTP/1.1\r\n"));
     client.print(F("Host: 192.168.0.9\r\n"));
     client.print(F("User-Agent: Arduino\r\n"));
     client.print(F("\r\n\r\n"));
     client.println();
+    
     // note the time that the connection was made
     lastConnectionTime = millis();
     getIsConnected = true;
   }
+  
+  else {
+    // if you couldn't make a connection
+    Serial.println("Connection failed");
+    getIsConnected = false;
+  }
+}
+//////////////////
+void httpRequest_POST() {
+  Serial.println();
+
+  // close any connection before send a new request
+  // this will free the socket on the WiFi shield
+  //client.stop();
+
+  delay(1000);
+  
+  // if there's a successful connection
+  if (client.connect(hostIp, 8080)) {
+    Serial.println("Connecting...");
+
+    //post data set//
+    String postdata = "";
+    String key_1 = "test_str=";
+
+    //데이터 유무에 따라 값을 넣어주거나 넣지 않는다.//
+    postdata.concat(key_1);
+    postdata.concat(transdata);
+
+    Serial.print("post data [");
+    Serial.print(postdata);
+    Serial.println("]");
+
+    // send the HTTP POST request
+    client.print(F("POST /DummyServer_Blog/TestArduino/testserver.jsp"));
+    client.print(F(" HTTP/1.1\r\n"));
+    client.print(F("Cache-Control: no-cache\r\n"));
+    client.print(F("Host: 192.168.0.9\r\n"));
+    client.print(F("User-Agent: Arduino\r\n"));
+    client.print(F("Content-Type: application/x-www-form-urlencoded\r\n"));
+    client.print(F("Content-Length: "));
+    client.println(postdata.length());
+    client.println();
+    client.println(postdata);
+    client.print(F("\r\n\r\n"));
+    
+    // note the time that the connection was made
+    lastConnectionTime = millis();
+    getIsConnected = true;
+  }
+  
   else {
     // if you couldn't make a connection
     Serial.println("Connection failed");
@@ -143,7 +206,6 @@ void printWifiData() {
   Serial.print(mac[1],HEX);
   Serial.print(":");
   Serial.println(mac[0],HEX);
- 
 }
 
 void printCurrentNet() {
