@@ -1,6 +1,9 @@
 #include <SPI.h>
 #include <WiFi.h>
 
+#define FIRE_SENSOR  2
+#define WARING_LED 12
+
 char ssid[] = "Family"; //연결할 와이파이 이름//
 char pass[] = "ehd35797"; //와이파이의 비밀번호/
 int status = WL_IDLE_STATUS;
@@ -18,7 +21,6 @@ const unsigned long postingInterval = 5000L; // delay between updates, in millis
 
 //서버의 정보//
 IPAddress hostIp(192, 168, 0, 10);
-
 // Initialize the Ethernet client object
 WiFiClient client;// Initialize the Ethernet client object
 
@@ -45,6 +47,9 @@ void setup() {
 
     delay(10000);
   }
+
+  pinMode(FIRE_SENSOR, INPUT); //센서활성화//
+  pinMode(WARING_LED, OUTPUT);
    
   // 연결에 성공했으면 연결확인 메시지와 연결된 네트워크 정보를 띄운다. 
   Serial.println("You're connected to the network");
@@ -58,6 +63,23 @@ void setup() {
 void loop() 
 {
   // put your main code here, to run repeatedly:
+  int fire_sensor_val = digitalRead(FIRE_SENSOR);
+
+  Serial.println(fire_sensor_val);
+
+  if(fire_sensor_val == 0) //현재 불이 감지되었다는 의미//
+  {
+    //서버로 데이터를 전송한다.(웹 통신 시 POST지향)//
+    httpRequest_Fire();
+
+    digitalWrite(WARING_LED, HIGH);
+    delay(2000);
+    digitalWrite(WARING_LED, LOW);
+    delay(500);
+  }
+  
+  delay(1000);
+  
   /*if(Serial.available())
   {
     char data = Serial.read();
@@ -112,6 +134,7 @@ void httpRequest_GET() {
     // send the HTTP GET request
     client.print(F("GET /DummyServer_Blog/TestArduino/testserver.jsp"));
     client.print("?");
+    
     //데이터 유무에 따라 값을 넣어주거나 넣지 않는다.//
     client.print("test_str=");
     client.print(transdata);
@@ -154,6 +177,56 @@ void httpRequest_POST() {
     //데이터 유무에 따라 값을 넣어주거나 넣지 않는다.//
     postdata.concat(key_1);
     postdata.concat(transdata);
+
+    Serial.print("post data [");
+    Serial.print(postdata);
+    Serial.println("]");
+
+    // send the HTTP POST request
+    client.print(F("POST /DummyServer_Blog/TestArduino/testserver.jsp"));
+    client.print(F(" HTTP/1.1\r\n"));
+    client.print(F("Cache-Control: no-cache\r\n"));
+    client.print(F("Host: 192.168.0.9\r\n"));
+    client.print(F("User-Agent: Arduino\r\n"));
+    client.print(F("Content-Type: application/x-www-form-urlencoded\r\n"));
+    client.print(F("Content-Length: "));
+    client.println(postdata.length());
+    client.println();
+    client.println(postdata);
+    client.print(F("\r\n\r\n"));
+    
+    // note the time that the connection was made
+    lastConnectionTime = millis();
+    getIsConnected = true;
+  }
+  
+  else {
+    // if you couldn't make a connection
+    Serial.println("Connection failed");
+    getIsConnected = false;
+  }
+}
+//////////////////
+void httpRequest_Fire() {
+  Serial.println();
+
+  // close any connection before send a new request
+  // this will free the socket on the WiFi shield
+  //client.stop();
+
+  delay(1000);
+  
+  // if there's a successful connection
+  if (client.connect(hostIp, 8080)) {
+    Serial.println("Connecting...");
+
+    //post data set//
+    String postdata = "";
+    String key_1 = "test_str=";
+
+    //데이터 유무에 따라 값을 넣어주거나 넣지 않는다.//
+    postdata.concat(key_1);
+    postdata.concat("fire!!");
 
     Serial.print("post data [");
     Serial.print(postdata);
