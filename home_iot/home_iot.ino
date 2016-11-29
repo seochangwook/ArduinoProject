@@ -4,6 +4,7 @@
 
 //temperature sensor//
 #define TEMP_SENSOR 2
+#define GAS_SENSOR A0
 
 DHT11 dht11(TEMP_SENSOR); //use temperature sensor library//
 
@@ -58,13 +59,28 @@ void setup() {
   Serial.println("-------<network info>-------");
   printCurrentNet();
   printWifiData();
-
   Serial.println("-------<data trans>-------");
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
   get_temperature(); //get temperature//
+
+  //서버로 부터 값을 받는다.//
+  //No Socket available문제 해결//
+  while (client.available() && status == WL_CONNECTED) {
+    char c = client.read();
+    if ( c != NULL ) {
+      if (rcvbuf.length() > 20)
+        rcvbuf = "";
+      rcvbuf += c;
+      Serial.write(c);
+    }
+  }
+
+  rcvbuf = "";
+
+  get_gas(); //get gas//
 
   //서버로 부터 값을 받는다.//
   //No Socket available문제 해결//
@@ -91,11 +107,7 @@ void get_temperature()
   
   if((err=dht11.read(humi, temp))==0) //온도, 습도 읽어와서 표시 
   {  
-    Serial.print("temperature:");   
-    Serial.print((int)temp);   
-    Serial.print(" humidity:");   
-    Serial.print((int)humi);  
-    Serial.println(); 
+    
   }
 
   else                               
@@ -106,9 +118,18 @@ void get_temperature()
     Serial.println();     
   } 
 
-  httpRequest_Temp_Humi((int)temp, (int)humi);
+  httpRequest_Temp_Humi((int)temp, (int)humi);    
+
+  delay(10000);
+}
+//////////////////
+void get_gas()
+{
+  int gas_value = analogRead(GAS_SENSOR);
   
-  delay(15000);                        
+  httpRequest_gas(gas_value);
+
+  delay(10000);
 }
 //////////////////
 void httpRequest_Temp_Humi(int temp, int humi) {
@@ -143,6 +164,57 @@ void httpRequest_Temp_Humi(int temp, int humi) {
 
     // send the HTTP POST request
     client.print(F("POST /service/temp_humi_insert"));
+    client.print(F(" HTTP/1.1\r\n"));
+    client.print(F("Cache-Control: no-cache\r\n"));
+    client.print(F("Host: 192.168.0.10\r\n"));
+    client.print(F("User-Agent: Arduino\r\n"));
+    client.print(F("Content-Type: application/x-www-form-urlencoded\r\n"));
+    client.print(F("Content-Length: "));
+    client.println(postdata.length());
+    client.println();
+    client.println(postdata);
+    client.print(F("\r\n\r\n"));
+    
+    // note the time that the connection was made
+    lastConnectionTime = millis();
+    getIsConnected = true;
+  }
+  
+  else {
+    // if you couldn't make a connection
+    Serial.println("Connection failed");
+    getIsConnected = false;
+  }
+}
+//////////////////
+void httpRequest_gas(int gas) {
+  Serial.println();
+
+  // close any connection before send a new request
+  // this will free the socket on the WiFi shield
+  //client.stop();
+
+  delay(1000);
+  
+  // if there's a successful connection
+  if (client.connect(hostIp, 3000)) {
+    Serial.println("Connecting...");
+
+    //post data set//
+    String postdata = "";
+    
+    String key_1 = "gasvalue=";
+
+    //데이터 유무에 따라 값을 넣어주거나 넣지 않는다.//
+    postdata.concat(key_1);
+    postdata.concat(gas);
+
+    Serial.print("post data [");
+    Serial.print(postdata);
+    Serial.println("]");
+
+    // send the HTTP POST request
+    client.print(F("POST /service/gas_insert"));
     client.print(F(" HTTP/1.1\r\n"));
     client.print(F("Cache-Control: no-cache\r\n"));
     client.print(F("Host: 192.168.0.10\r\n"));
