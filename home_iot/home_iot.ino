@@ -25,7 +25,7 @@ unsigned long lastConnectionTime = 0;         // last time you connected to the 
 const unsigned long postingInterval = 5000L; // delay between updates, in millisecondsunsigned long lastConnectionTime = 0;         // last time you connected to the server, in milliseconds
 
 //서버의 정보//
-IPAddress hostIp(192, 168, 0, 10);
+IPAddress hostIp(192, 168, 0, 8);
 // Initialize the Ethernet client object
 WiFiClient client;// Initialize the Ethernet client object//서버의 정보//
 
@@ -65,39 +65,11 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   get_temperature(); //get temperature//
-
-  //서버로 부터 값을 받는다.//
-  //No Socket available문제 해결//
-  while (client.available() && status == WL_CONNECTED) {
-    char c = client.read();
-    if ( c != NULL ) {
-      if (rcvbuf.length() > 20)
-        rcvbuf = "";
-      rcvbuf += c;
-      Serial.write(c);
-    }
-  }
-
-  rcvbuf = "";
-
   get_gas(); //get gas//
 
-  //서버로 부터 값을 받는다.//
-  //No Socket available문제 해결//
-  while (client.available() && status == WL_CONNECTED) {
-    char c = client.read();
-    if ( c != NULL ) {
-      if (rcvbuf.length() > 20)
-        rcvbuf = "";
-      rcvbuf += c;
-      Serial.write(c);
-    }
-  }
-
+  //확실하게 연결을 제거 (connect -> close)//
   client.flush();
   client.stop();
-
-  rcvbuf = ""; //값을 다시 초기화//
 }
 /////////////////////
 void get_temperature()
@@ -118,7 +90,7 @@ void get_temperature()
     Serial.println();     
   } 
 
-  httpRequest_Temp_Humi((int)temp, (int)humi);    
+  httpRequest_Temp_Humi((int)temp, (int)humi);  
 
   delay(10000);
 }
@@ -185,6 +157,23 @@ void httpRequest_Temp_Humi(int temp, int humi) {
     Serial.println("Connection failed");
     getIsConnected = false;
   }
+
+  //서버로 부터 값을 받는다.//
+  //No Socket available문제 해결//
+  while (client.available() && status == WL_CONNECTED) {
+    char c = client.read();
+    if ( c != NULL ) {
+      if (rcvbuf.length() > 20)
+        rcvbuf = "";
+      rcvbuf += c;
+      Serial.write(c);
+
+      rcvbuf = "";
+
+      client.flush();
+      client.stop();
+    }
+  }
 }
 //////////////////
 void httpRequest_gas(int gas) {
@@ -235,6 +224,23 @@ void httpRequest_gas(int gas) {
     // if you couldn't make a connection
     Serial.println("Connection failed");
     getIsConnected = false;
+  }
+
+  //서버로 부터 값을 받는다.//
+  //No Socket available문제 해결//
+  while (client.available() && status == WL_CONNECTED) {
+    char c = client.read();
+    if ( c != NULL ) {
+      if (rcvbuf.length() > 20)
+        rcvbuf = "";
+      rcvbuf += c;
+      Serial.write(c);
+
+      rcvbuf = "";
+
+      client.flush();
+      client.stop();
+    }
   }
 }
 //////////////////
