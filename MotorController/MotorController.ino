@@ -89,6 +89,7 @@ void loop()
       Serial.print("/");
       Serial.println(rcvbuf[str_size-1]);
 
+      //파싱된 제어숫자를 가지고 on/off제어//
       if(rcvbuf[str_size-1] == '0')
       {
         Serial.println("motor off state");
