@@ -18,10 +18,11 @@ int status = WL_IDLE_STATUS;     // the Wifi radio's status
 unsigned long lastConnectionTime = 0;         // last time you connected to the server, in milliseconds
 const unsigned long postingInterval = 5000L; // delay between updates, in millisecondsunsigned long lastConnectionTime = 0;
 
+String rcvbuf;
 boolean getIsConnected = false;
 
 //서버의 정보//
-IPAddress hostIp(172, 30, 1, 31);
+IPAddress hostIp(172, 30, 1, 7);
 int SERVER_PORT = 8000;
 // Initialize the Ethernet client object
 WiFiClient client;// Initialize the Ethernet client object//서버의 정보//
@@ -68,9 +69,7 @@ void setup() {
 
 void loop() {
   get_temperature(); //get temperature//
-
-  client.flush();
-  client.stop();
+  Serial.println();
 }
 //////////////////////////
 void get_temperature()
@@ -122,8 +121,8 @@ void httpRequest_Temp_Humi(int temp, int humi) {
     
     StaticJsonBuffer<200> jsonBuffer;
     JsonObject& root = jsonBuffer.createObject();
-    root["tempvalue"] = "10";
-    root["humivalue"] = "20";
+    root["tempvalue"] = temp;
+    root["humivalue"] = humi;
 
     root.printTo(jsondata); //String으로 변환/
     Serial.println(jsondata);
@@ -132,7 +131,7 @@ void httpRequest_Temp_Humi(int temp, int humi) {
     client.print(F("POST /ajaxtest"));
     client.print(F(" HTTP/1.1\r\n"));
     client.print(F("Cache-Control: no-cache\r\n"));
-    client.print(F("Host: 172.30.1.31:8000\r\n"));
+    client.print(F("Host: 172.30.1.7:8000\r\n"));
     client.print(F("User-Agent: Arduino\r\n"));
     client.print(F("Content-Type: application/json\r\n"));
     client.print(F("Content-Length: "));
@@ -151,6 +150,44 @@ void httpRequest_Temp_Humi(int temp, int humi) {
     Serial.println("Connection failed");
     getIsConnected = false;
   }
+
+  //서버로 부터 값을 받는다.//
+  int headcount = 0;
+ 
+  //No Socket available문제 해결//
+  while (client.connected()) {
+    if (client.available() && status == WL_CONNECTED) {
+      char c = client.read();
+
+      //String에 담아서 원하는 부분만 파싱하도록 함//
+      rcvbuf += c;
+      
+      if(c == '\r'){
+        headcount ++; //해더 정보는 생략하기 위해서 설정//
+
+        if(headcount != 7){
+          rcvbuf = "";
+        }
+      }
+
+      //데이터 영역/
+      if(headcount == 7){
+        //JSON파싱//
+        StaticJsonBuffer<200> jsonBuffer;
+        JsonObject& root = jsonBuffer.parseObject(rcvbuf);
+        String result = root["result"];
+        
+        Serial.println(result);
+  
+        client.stop(); //클라이언트 접속 해제//
+        
+        rcvbuf = "";
+      }
+    }
+  }
+
+  client.flush();
+  client.stop();
 }
 //////////////////////////
 void printWifiData() {
