@@ -24,7 +24,7 @@ String rcvbuf;
 boolean getIsConnected = false;
 
 //서버의 정보//
-IPAddress hostIp(172, 30, 1, 56);
+IPAddress hostIp(172, 30, 1, 23);
 int SERVER_PORT = 8000;
 // Initialize the Ethernet client object
 WiFiClient client;// Initialize the Ethernet client object//서버의 정보//
@@ -126,20 +126,22 @@ void httpRequest_Temp_Humi(int temp, int humi) {
 
     //POST Data Set//
     String jsondata = "";
+    String user_id = "scw3315";
     
     StaticJsonBuffer<200> jsonBuffer;
     JsonObject& root = jsonBuffer.createObject();
     root["tempvalue"] = temp;
     root["humivalue"] = humi;
+    root["user_id"] = user_id;
 
     root.printTo(jsondata); //String으로 변환/
     Serial.println(jsondata);
     
     // send the HTTP POST request
-    client.print(F("POST /ajaxtest"));
+    client.print(F("POST /temphumidata"));
     client.print(F(" HTTP/1.1\r\n"));
     client.print(F("Cache-Control: no-cache\r\n"));
-    client.print(F("Host: 172.30.1.56:8000\r\n"));
+    client.print(F("Host: 172.30.1.23:8000\r\n"));
     client.print(F("User-Agent: Arduino\r\n"));
     client.print(F("Content-Type: application/json\r\n"));
     client.print(F("Content-Length: "));
