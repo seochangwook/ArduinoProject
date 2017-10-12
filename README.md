@@ -14,6 +14,6 @@ Dreaming Developer 운영자 서창욱
 <li>https://github.com/arduino/Arduino</li>
 <li>https://www.arduino.cc/en/Hacking/WiFiShieldFirmwareUpgrading<br>
 (sudo ./ArduinoWifiShield_upgrade.sh -a /Applications/Arduino.app/Contents/Java -f all)
-<img src="https://raw.githubusercontent.com/seochangwook/ArduinoProject/master/wifishield_update_process.png" width="700" height="500">
+<img src="https://raw.githubusercontent.com/seochangwook/ArduinoProject/master/wifishield_update_process.png" width="700" height="400">
 </li>
 <li>http://dfu-programmer.github.io/</li>
