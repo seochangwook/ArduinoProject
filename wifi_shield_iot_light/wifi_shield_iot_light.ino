@@ -1,14 +1,19 @@
+//#include <sha256.h>
+#include <AESLib.h>
 #include <WiFi.h>
 #include <ArduinoJson.h>
 
 #define BAUD_RATE 9600
 
+//Encrypt Key//
+uint8_t key[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31};
+
 const unsigned int LDR_SENSOR_1 = A0;
 const unsigned int LDR_SENSOR_2 = A1;
 const unsigned int LDR_SENSOR_3 = A2;
 
-const unsigned int LED_PORT = 7;
-const unsigned int LED2_PORT = 6;
+const unsigned int LED_PORT = 5;
+const unsigned int LED2_PORT = 4;
 
 //Wifi Setting//
 char ssid[] = "KT_GiGA_2G_Family";     //  your network SSID (name) 1575835037
@@ -22,13 +27,13 @@ String rcvbuf;
 boolean getIsConnected = false;
 
 //서버의 정보//
-IPAddress hostIp(172, 30, 1, 23);
+IPAddress hostIp(172, 30, 1, 9);
 int SERVER_PORT = 8000;
 // Initialize the Ethernet client object
 WiFiClient client;// Initialize the Ethernet client object//서버의 정보//
 
 void setup() {
-  // put your setup code here, to run once:
+  
   Serial.begin(BAUD_RATE);
 
   pinMode(LED_PORT, OUTPUT);
@@ -46,6 +51,10 @@ void setup() {
   } else{
     Serial.println("wifi shield is load...");
   }
+
+  // check firmware version
+  Serial.print(F("Firmware version: "));
+  Serial.println(WiFi.firmwareVersion());
 
   // if you're not connected, stop here:
   if ( status != WL_CONNECTED) { 
@@ -80,6 +89,10 @@ void get_light()
   int ldr_sensor2_value = map(analogRead(LDR_SENSOR_2), 0, 1023, 0, 255);
   int ldr_sensor3_value = map(analogRead(LDR_SENSOR_3), 0, 1023, 0, 255);
 
+  Serial.println(ldr_sensor1_value);
+  Serial.println(ldr_sensor2_value);
+  Serial.println(ldr_sensor3_value);
+  
   httpRequest_Light(ldr_sensor1_value, ldr_sensor2_value, ldr_sensor3_value);  
   
   digitalWrite(LED2_PORT, HIGH);
@@ -90,9 +103,6 @@ void get_light()
 }
 //////////////////////////
 void httpRequest_Light(int ldr_sensor1_value, int ldr_sensor2_value, int ldr_sensor3_value){
-  Serial.println(ldr_sensor1_value);
-  Serial.println(ldr_sensor2_value);
-  Serial.println(ldr_sensor3_value);
 
   Serial.println();
 
@@ -100,7 +110,7 @@ void httpRequest_Light(int ldr_sensor1_value, int ldr_sensor2_value, int ldr_sen
   // this will free the socket on the WiFi shield
   //client.stop();
 
-  delay(3000);
+  delay(1000);
   
   // if there's a successful connection
   if (client.connect(hostIp, SERVER_PORT)) {
@@ -109,6 +119,13 @@ void httpRequest_Light(int ldr_sensor1_value, int ldr_sensor2_value, int ldr_sen
     //POST Data Set//
     String jsondata = "";
     String user_id = "scw3315";
+
+    //Encrypt//
+    char user_id_crypto[50];
+    user_id.toCharArray(user_id_crypto, 50);
+    aes256_enc_single(key, user_id_crypto);
+    Serial.print("encrypt: ");
+    Serial.println(user_id_crypto);
     
     StaticJsonBuffer<200> jsonBuffer;
     JsonObject& root = jsonBuffer.createObject();
@@ -124,15 +141,20 @@ void httpRequest_Light(int ldr_sensor1_value, int ldr_sensor2_value, int ldr_sen
     client.print(F("POST /lightdata"));
     client.print(F(" HTTP/1.1\r\n"));
     client.print(F("Cache-Control: no-cache\r\n"));
-    client.print(F("Host: 172.30.1.23:8000\r\n"));
+    client.print(F("Host: 172.30.1.9:8000\r\n"));
     client.print(F("User-Agent: Arduino\r\n"));
-    client.print(F("Content-Type: application/json\r\n"));
+    client.print(F("Content-Type: application/json;charset=UTF-8\r\n"));
     client.print(F("Content-Length: "));
     client.println(jsondata.length());
     client.println();
     client.println(jsondata);
     client.print(F("\r\n\r\n"));
-    
+
+    //Decrpyt//
+    aes256_dec_single(key, user_id_crypto);
+    Serial.print("decrypt: ");
+    Serial.println(user_id_crypto);
+
     // note the time that the connection was made
     lastConnectionTime = millis();
     getIsConnected = true;
