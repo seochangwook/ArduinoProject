@@ -1,12 +1,14 @@
-//#include <sha256.h>
+#include <sha256.h>
 #include <AESLib.h>
 #include <WiFi.h>
 #include <ArduinoJson.h>
 
 #define BAUD_RATE 9600
+#define USERID "scw3315"
 
 //Encrypt Key//
 uint8_t key[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31};
+String sha_result = "";
 
 const unsigned int LDR_SENSOR_1 = A0;
 const unsigned int LDR_SENSOR_2 = A1;
@@ -27,7 +29,7 @@ String rcvbuf;
 boolean getIsConnected = false;
 
 //서버의 정보//
-IPAddress hostIp(172, 30, 1, 9);
+IPAddress hostIp(172, 30, 1, 11);
 int SERVER_PORT = 8000;
 // Initialize the Ethernet client object
 WiFiClient client;// Initialize the Ethernet client object//서버의 정보//
@@ -70,6 +72,22 @@ void setup() {
     printCurrentNet();
     Serial.println("-------------------------------------");
 
+    Serial.println("------<< SHA256 Setting>>------");
+    //SHA256 Encrypt//
+    uint8_t *hash;
+    Sha256.init();
+    Sha256.print(USERID);
+    hash = Sha256.result();
+
+    for (int i=0; i<32; i++) {
+      sha_result += "0123456789abcdef"[hash[i]>>4];
+      sha_result += "0123456789abcdef"[hash[i]&0xf];
+    }
+
+    Serial.println(sha_result);
+    Serial.println("SHA256 setting success...");
+    Serial.println("-------------------------------");
+    
     digitalWrite(LED_PORT, HIGH);
     delay(2000);
     digitalWrite(LED_PORT, LOW);
@@ -118,14 +136,14 @@ void httpRequest_Light(int ldr_sensor1_value, int ldr_sensor2_value, int ldr_sen
 
     //POST Data Set//
     String jsondata = "";
-    String user_id = "scw3315";
+    String user_id = USERID;
 
-    //Encrypt//
+    /*//Encrypt//
     char user_id_crypto[50];
     user_id.toCharArray(user_id_crypto, 50);
     aes256_enc_single(key, user_id_crypto);
     Serial.print("encrypt: ");
-    Serial.println(user_id_crypto);
+    Serial.println(user_id_crypto);*/
     
     StaticJsonBuffer<200> jsonBuffer;
     JsonObject& root = jsonBuffer.createObject();
@@ -141,7 +159,7 @@ void httpRequest_Light(int ldr_sensor1_value, int ldr_sensor2_value, int ldr_sen
     client.print(F("POST /lightdata"));
     client.print(F(" HTTP/1.1\r\n"));
     client.print(F("Cache-Control: no-cache\r\n"));
-    client.print(F("Host: 172.30.1.9:8000\r\n"));
+    client.print(F("Host: 172.30.1.11:8000\r\n"));
     client.print(F("User-Agent: Arduino\r\n"));
     client.print(F("Content-Type: application/json;charset=UTF-8\r\n"));
     client.print(F("Content-Length: "));
@@ -150,10 +168,10 @@ void httpRequest_Light(int ldr_sensor1_value, int ldr_sensor2_value, int ldr_sen
     client.println(jsondata);
     client.print(F("\r\n\r\n"));
 
-    //Decrpyt//
+    /*//Decrpyt//
     aes256_dec_single(key, user_id_crypto);
     Serial.print("decrypt: ");
-    Serial.println(user_id_crypto);
+    Serial.println(user_id_crypto);*/
 
     // note the time that the connection was made
     lastConnectionTime = millis();
