@@ -2,15 +2,19 @@
 #include <DHT11.h> //온습도 라이브러리//
 #include <WiFi.h>
 #include <ArduinoJson.h>
+#include <sha1.h>
 
 //temperature sensor//
 #define TEMP_SENSOR 6
+#define USERID "scw3315"
 
 const unsigned int LED_PORT = 8;
 const unsigned int LED2_PORT = 5;
 
 DHT11 dht11(TEMP_SENSOR); //use temperature sensor library
 LiquidCrystal lcd(3, 4, 10, 11, 12, 13); //LCD//
+
+String sha_result = "";
 
 //Wifi Setting//
 char ssid[] = "KT_GiGA_2G_Family";     //  your network SSID (name) 1575835037
@@ -24,7 +28,7 @@ String rcvbuf;
 boolean getIsConnected = false;
 
 //서버의 정보//
-IPAddress hostIp(172, 30, 1, 23);
+IPAddress hostIp(172, 30, 1, 12);
 int SERVER_PORT = 8000;
 // Initialize the Ethernet client object
 WiFiClient client;// Initialize the Ethernet client object//서버의 정보//
@@ -51,6 +55,10 @@ void setup() {
   } else{
     Serial.println("wifi shield is load...");
   }
+
+  // check firmware version
+  Serial.print(F("Firmware version: "));
+  Serial.println(WiFi.firmwareVersion());
   
   // if you're not connected, stop here:
   if ( status != WL_CONNECTED) { 
@@ -68,6 +76,23 @@ void setup() {
     lcd.print("Server connect..");
     Serial.println("-------------------------------------");
 
+    Serial.println("------<< SHA256 Setting>>------");
+    //SHA256 Encrypt//
+    uint8_t *hash;
+    Sha1.init();
+    Sha1.print(USERID);
+    hash = Sha1.result();
+
+    for (int i=0; i<20; i++) {
+      sha_result += "0123456789abcdef"[hash[i]>>4];
+      sha_result += "0123456789abcdef"[hash[i]&0xf];
+    }
+
+    Serial.println(USERID);
+    Serial.println(sha_result);
+    Serial.println("SHA256 setting success...");
+    Serial.println("-------------------------------");
+    
     digitalWrite(LED_PORT, HIGH);
     delay(2000);
     digitalWrite(LED_PORT, LOW);
@@ -126,13 +151,12 @@ void httpRequest_Temp_Humi(int temp, int humi) {
 
     //POST Data Set//
     String jsondata = "";
-    String user_id = "scw3315";
     
     StaticJsonBuffer<200> jsonBuffer;
     JsonObject& root = jsonBuffer.createObject();
     root["tempvalue"] = temp;
     root["humivalue"] = humi;
-    root["user_id"] = user_id;
+    root["user_id"] = sha_result;
 
     root.printTo(jsondata); //String으로 변환/
     Serial.println(jsondata);
@@ -141,7 +165,7 @@ void httpRequest_Temp_Humi(int temp, int humi) {
     client.print(F("POST /temphumidata"));
     client.print(F(" HTTP/1.1\r\n"));
     client.print(F("Cache-Control: no-cache\r\n"));
-    client.print(F("Host: 172.30.1.23:8000\r\n"));
+    client.print(F("Host: 172.30.1.12:8000\r\n"));
     client.print(F("User-Agent: Arduino\r\n"));
     client.print(F("Content-Type: application/json\r\n"));
     client.print(F("Content-Length: "));
@@ -153,6 +177,17 @@ void httpRequest_Temp_Humi(int temp, int humi) {
     // note the time that the connection was made
     lastConnectionTime = millis();
     getIsConnected = true;
+
+    String lcdprintstr = "";
+    lcdprintstr.concat("temp:");
+    lcdprintstr.concat(temp);
+    lcdprintstr.concat("/humi:");
+    lcdprintstr.concat(humi);
+          
+    Serial.println(lcdprintstr);
+    lcd.print(lcdprintstr);
+
+    lcdprintstr = "";
   }
   
   else {
