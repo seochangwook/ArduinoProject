@@ -20,6 +20,10 @@ void setup() {
   } else{
     Serial.println("wifi shield is load...");
   }
+
+  // check firmware version
+  Serial.print(F("Firmware version: "));
+  Serial.println(WiFi.firmwareVersion());// check firmware version
   
   // if you're not connected, stop here:
   if ( status != WL_CONNECTED) { 
