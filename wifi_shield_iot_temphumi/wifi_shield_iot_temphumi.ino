@@ -28,7 +28,7 @@ String rcvbuf;
 boolean getIsConnected = false;
 
 //서버의 정보//
-IPAddress hostIp(172, 30, 1, 12);
+IPAddress hostIp(172, 30, 1, 30);
 int SERVER_PORT = 8000;
 // Initialize the Ethernet client object
 WiFiClient client;// Initialize the Ethernet client object//서버의 정보//
@@ -165,7 +165,7 @@ void httpRequest_Temp_Humi(int temp, int humi) {
     client.print(F("POST /temphumidata"));
     client.print(F(" HTTP/1.1\r\n"));
     client.print(F("Cache-Control: no-cache\r\n"));
-    client.print(F("Host: 172.30.1.12:8000\r\n"));
+    client.print(F("Host: 172.30.1.30:8000\r\n"));
     client.print(F("User-Agent: Arduino\r\n"));
     client.print(F("Content-Type: application/json\r\n"));
     client.print(F("Content-Length: "));
@@ -184,7 +184,7 @@ void httpRequest_Temp_Humi(int temp, int humi) {
     lcdprintstr.concat("/humi:");
     lcdprintstr.concat(humi);
           
-    Serial.println(lcdprintstr);
+    //Serial.println(lcdprintstr);
     lcd.print(lcdprintstr);
 
     lcdprintstr = "";
@@ -209,14 +209,14 @@ void httpRequest_Temp_Humi(int temp, int humi) {
       
       if(c == '\r'){
         headcount ++; //해더 정보는 생략하기 위해서 설정//
-
-        if(headcount != 7){
+        //Serial.println(rcvbuf);
+        if(headcount != 13){
           rcvbuf = "";
         }
       }
 
       //데이터 영역/
-      if(headcount == 7){
+      if(headcount == 13){
         //JSON파싱//
         StaticJsonBuffer<200> jsonBuffer;
         JsonObject& root = jsonBuffer.parseObject(rcvbuf);
@@ -233,7 +233,7 @@ void httpRequest_Temp_Humi(int temp, int humi) {
           lcdprintstr.concat("/humi:");
           lcdprintstr.concat(humi);
           
-          Serial.println(lcdprintstr);
+          //Serial.println(lcdprintstr);
           lcd.print(lcdprintstr);
 
           lcdprintstr = "";
