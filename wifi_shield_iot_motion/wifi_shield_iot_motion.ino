@@ -3,6 +3,10 @@
 
 #define BAUD_RATE 9600
 #define USERID "scw3315" //암호화를 하여야 하나 우노의 성능이 부족하여 일반 평문으로 전송//
+#define PIR_INPUT_PIN 2
+
+const unsigned int LED_PORT = 5;
+const unsigned int LED2_PORT = 4;
 
 char ssid[] = "KT_GiGA_2G_Family";     //  your network SSID (name) 
 char pass[] = "ehd0134679";    // your network password
@@ -14,8 +18,39 @@ const unsigned long postingInterval = 5000L; // delay between updates, in millis
 String rcvbuf;
 boolean getIsConnected = false;
 
+int val = 0;
+
+//모션인식관련 클래스//
+class PassiveInfraredSensor
+{
+  int input_pin;
+  
+public:
+  PassiveInfraredSensor(const int input_pin) //생성자//
+  {
+    this->input_pin = input_pin;
+
+    pinMode(this->input_pin, INPUT);
+  }
+
+  const bool motion_detected() const
+  {
+    if(digitalRead(this->input_pin) == HIGH)
+    {
+      return true;
+    }
+
+    else
+    {
+      return false;
+    }
+  }
+};
+
+PassiveInfraredSensor pir(PIR_INPUT_PIN);
+
 //서버의 정보//
-IPAddress hostIp(172, 30, 1, 15);
+IPAddress hostIp(172, 30, 1, 19);
 int SERVER_PORT = 8000;
 // Initialize the Ethernet client object
 WiFiClient client;// Initialize the Ethernet client object//서버의 정보//
@@ -23,6 +58,9 @@ WiFiClient client;// Initialize the Ethernet client object//서버의 정보//
 void setup() {
   // initialize serial:
   Serial.begin(BAUD_RATE);
+
+  pinMode(LED_PORT, OUTPUT);
+  pinMode(LED2_PORT, OUTPUT);
 
   // attempt to connect using WPA2 encryption:
   Serial.println("Attempting to connect to WPA network...");
@@ -49,6 +87,10 @@ void setup() {
   // if you are connected, print out info about the connection:
   else {
     Serial.println("Connected to network");
+
+    digitalWrite(LED_PORT, HIGH);
+    delay(1000);
+    digitalWrite(LED_PORT, LOW);
 
     Serial.println("--------------------------");
     printWifiData();
@@ -82,8 +124,20 @@ void setup() {
 }
 
 void loop() {
-  httpRequest_Motiondata();
-  Serial.println();
+  if(pir.motion_detected())
+  {
+    val = 1;
+    httpRequest_Motiondata();
+    Serial.println();
+  }
+
+  else
+  {
+    val = 0;
+    httpRequest_Motiondata();
+    Serial.println();
+  }
+
   delay(5000);
 }
 //////////////////////////
@@ -115,7 +169,7 @@ void httpRequest_Motiondata(){
     StaticJsonBuffer<200> jsonBuffer;
     JsonObject& root = jsonBuffer.createObject();
     root["user_id"] = USERID;
-    root["motionvalue"] = "1";
+    root["motionvalue"] = val;
 
     root.printTo(jsondata); //String으로 변환/
     Serial.println(jsondata);
@@ -124,7 +178,7 @@ void httpRequest_Motiondata(){
     client.print(F("POST /motiondata"));
     client.print(F(" HTTP/1.1\r\n"));
     client.print(F("Cache-Control: no-cache\r\n"));
-    client.print(F("Host: 172.30.1.15:8000\r\n"));
+    client.print(F("Host: 172.30.1.19:8000\r\n"));
     client.print(F("User-Agent: Arduino\r\n"));
     client.print(F("Content-Type: application/json;charset=UTF-8\r\n"));
     client.print(F("Content-Length: "));
@@ -176,6 +230,10 @@ void httpRequest_Motiondata(){
         String result = root["result"];
 
         Serial.println(result);
+
+        digitalWrite(LED2_PORT, HIGH);
+        delay(1000);
+        digitalWrite(LED2_PORT, LOW);
   
         client.stop(); //클라이언트 접속 해제//
         
