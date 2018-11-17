@@ -1,9 +1,11 @@
 //Receive//
+#define TEST_LED 8
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
 
-  pinMode(13, OUTPUT);
+  pinMode(TEST_LED, OUTPUT);
 }
 
 void loop() {
@@ -13,9 +15,9 @@ void loop() {
     Serial.println(receive_msg);
     
     if(receive_msg == 'A'){
-      digitalWrite(13, HIGH);
+      digitalWrite(TEST_LED, HIGH);
     } else if(receive_msg == 'B'){
-      digitalWrite(13, LOW);
+      digitalWrite(TEST_LED, LOW);
     }
   }
 }
